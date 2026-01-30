@@ -2,26 +2,28 @@
 set -e
 
 LOGFILE="/var/log/deploy.log"
+PROJECT_DIR="/root/code-agent-global/code-agent"
 
-echo "----- Deploy started at $(date) -----" >> $LOGFILE 2>&1
+echo "----- Deploy started at $(date) -----" >> "$LOGFILE" 2>&1
 
-cd /root/code-agent-global/code-agent || { echo "Failed to cd to repo" >> $LOGFILE; exit 1; }
+cd "$PROJECT_DIR" || {
+  echo "Failed to cd to project dir" >> "$LOGFILE"
+  exit 1
+}
 
-echo "Current git status:" >> $LOGFILE
-git status >> $LOGFILE 2>&1
+echo "Git status:" >> "$LOGFILE"
+git status >> "$LOGFILE" 2>&1
 
-echo "Trying git pull..." >> $LOGFILE
-git pull origin main >> $LOGFILE 2>&1 || { echo "git pull failed" >> $LOGFILE; exit 1; }
+echo "Git pull..." >> "$LOGFILE"
+git pull origin main >> "$LOGFILE" 2>&1
 
-echo "Git pull succeeded" >> $LOGFILE
+echo "Docker compose down" >> "$LOGFILE"
+docker compose down >> "$LOGFILE" 2>&1
 
-git pull origin main
+echo "Docker compose up --build" >> "$LOGFILE"
+docker compose up -d --build >> "$LOGFILE" 2>&1
 
-docker build --build-arg WEBHOOK_SECRET=$WEBHOOK_SECRET -t code-agent-container:latest .
+echo "Docker compose ps" >> "$LOGFILE"
+docker compose ps >> "$LOGFILE" 2>&1
 
-docker stop code-agent-container || true
-docker rm code-agent-container || true
-
-docker run -d -p 8080:8080 -v $(pwd)/logs:/logs --name code-agent-container -e WEBHOOK_SECRET=$WEBHOOK_SECRET code-agent-container:latest
-
-echo "----- Deploy finished at $(date) -----" >> $LOGFILE 2>&1
+echo "----- Deploy finished at $(date) -----" >> "$LOGFILE" 2>&1
